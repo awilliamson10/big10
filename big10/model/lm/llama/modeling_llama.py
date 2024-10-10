@@ -552,7 +552,6 @@ class LlamaSdpaAttention(LlamaAttention):
                 cache_position=cache_position,
                 position_embeddings=position_embeddings,
             )
-
         bsz, q_len, _ = hidden_states.size()
 
         query_states = self.q_proj(hidden_states)

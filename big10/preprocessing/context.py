@@ -37,11 +37,11 @@ def get_game_team_stats(game_information):
     home_team_stats = stats.filter(pl.col("team") == home_team).filter(pl.col("season") == season).filter(pl.col("week") == week)
     if home_team_stats.is_empty():
         raise ValueError(f"No stats found for {home_team} in season {season} week {week}")
-    teams["home_team"] = home_team_stats.to_dicts()
+    teams["home_team"] = home_team_stats.to_dicts()[0]
     away_team_stats = stats.filter(pl.col("team") == away_team).filter(pl.col("season") == season).filter(pl.col("week") == week)
     if away_team_stats.is_empty():
         raise ValueError(f"No stats found for {away_team} in season {season} week {week}")
-    teams["away_team"] = away_team_stats.to_dicts()
+    teams["away_team"] = away_team_stats.to_dicts()[0]
 
     return teams
 
@@ -71,51 +71,80 @@ def get_game_context(game_id):
         "drives": "<matchup> " + text
     }
 
-def gen_game_input(game_context):
-    game_info = game_context["game_info"]
+def camelCase(st):
+    # convert from snake_case to camelCase
+    output = ''.join(x for x in st.title() if x.isalnum())
+    return output[0].upper() + output[1:]
 
-    week = game_info["week"]
-    seasonType = game_info["seasonType"]
-    neutralSite = game_info["neutralSite"]
-    conferenceGame = game_info["conferenceGame"]
-    venueId = game_info["venueId"]
-    homeId = game_info["homeId"]
-    awayId = game_info["awayId"]
-    homePregameElo = game_info["homePregameElo"]
-    awayPregameElo = game_info["awayPregameElo"]
+def extract_game_context(game):
+    info = game.get("game_info", {})
 
-    weather_info = game_context["weather_info"]
-    gameIndoors = weather_info["gameIndoors"] if weather_info is not None else True
-    temperature = weather_info["temperature"] if weather_info is not None else 70
-    humidity = weather_info["humidity"] if weather_info is not None else 50
-    windSpeed = weather_info["windSpeed"] if weather_info is not None else 0
-    weatherCondition = weather_info["weatherCondition"] if weather_info is not None else "Clear"
+    week = info.get("week", None)
+    seasonType = info.get("seasonType", None)
+    neutralSite = info.get("neutralSite", None)
+    conferenceGame = info.get("conferenceGame", None)
+    venueId = info.get("venueId", None)
 
-    winprobs = game_context["winprobs"]
-    home_win_prob = winprobs["home_win_prob"] if winprobs is not None else -1
-    home_spread = winprobs["home_spread"] if winprobs is not None else -1
+    homeId = info.get("homeId", None)
+    homeConference = info.get("homeConference", None)
+    awayId = info.get("awayId", None)
+    awayConference = info.get("awayConference", None)
 
-    home_team_stats = game_context["team_stats"]["home_team"][0]
-    away_team_stats = game_context["team_stats"]["away_team"][0]
+    weather = game.get("weather_info", {})
+    startTime = weather.get("startTime", None)
+    if startTime is not None:
+        startTime = startTime.strftime("%H:%M")
+    gameIndoors = weather.get("gameIndoors", None)
+    temperature = weather.get("temperature", None)
+    if temperature is not None:
+        temperature = int(temperature)
+    humidity = weather.get("humidity", None)
+    if humidity is not None:
+        humidity = int(humidity)
+    precipitation = weather.get("precipitation", None)
+    if precipitation is not None:
+        precipitation = int(precipitation * 100)
+    windSpeed = weather.get("windSpeed", None)
+    if windSpeed is not None:
+        windSpeed = int(windSpeed)
+    weatherCondition = weather.get("weatherCondition", None)
 
-    home_team_stats = {k: v for k, v in home_team_stats.items() if k not in ["team", "season", "week"]}
-    away_team_stats = {k: v for k, v in away_team_stats.items() if k not in ["team", "season", "week"]}
+    winprobs = game.get("winprobs", {})
+    homeWinProb = winprobs.get("home_win_prob", None)
+    if homeWinProb is not None:
+        homeWinProb = int(homeWinProb * 100)
+    homeSpread = winprobs.get("home_spread", None)
+    if homeSpread is not None:
+        homeSpread = int(homeSpread)
 
-    game_input = [
-        week, seasonType, neutralSite, conferenceGame, venueId, homeId, awayId, homePregameElo, awayPregameElo,
-        gameIndoors, temperature, humidity, windSpeed, weatherCondition, home_win_prob, home_spread
-    ]
-    game_input += list(home_team_stats.values())
-    game_input += list(away_team_stats.values())
+    homeTeam = game.get("team_stats", {}).get("home_team", {})
+    awayTeam = game.get("team_stats", {}).get("away_team", {})
 
-    return game_input, game_context["drives"]
+    home_team_stats = {f"home{camelCase(k)}": int(v) for k, v in homeTeam.items() if k not in ["team", "conference", "season", "week"]}
+    away_team_stats = {f"away{camelCase(k)}": int(v) for k, v in awayTeam.items() if k not in ["team", "conference", "season", "week"]}
 
-def get_processed_game_data(game_id: str) -> Tuple[List[float], str]:
-    game_context = get_game_context(game_id)
-    if game_context is None:
-        # print(f"Warning: No game context found for game_id {game_id}")
-        return None
-    game_input, drives_text = gen_game_input(game_context)
-    if game_input is None or drives_text is None:
-        return None
-    return game_input, drives_text
+    drives = game.get("drives", None)
+
+    return {
+        "week": week,
+        "seasonType": seasonType,
+        "neutralSite": neutralSite,
+        "conferenceGame": conferenceGame,
+        "venueId": venueId,
+        "homeId": homeId,
+        "homeConference": homeConference,
+        "awayId": awayId,
+        "awayConference": awayConference,
+        "startTime": startTime,
+        "gameIndoors": gameIndoors,
+        "temperature": temperature,
+        "humidity": humidity,
+        "precipitation": precipitation,
+        "windSpeed": windSpeed,
+        "weatherCondition": weatherCondition,
+        "homeWinProb": homeWinProb,
+        "homeSpread": homeSpread,
+        **home_team_stats,
+        **away_team_stats,
+        "drives": drives
+    }

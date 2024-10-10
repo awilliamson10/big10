@@ -4,7 +4,7 @@ from transformers import AutoTokenizer, BitsAndBytesConfig, logging
 
 logging.set_verbosity_error()
 
-from big10.model import Big10LlamaForCausalLM, Big10LlamaConfig
+from big10.model import Big10LlamaForCausalLM
 
 
 def load_pretrained_model(model_path, model_type, load_8bit=False, load_4bit=False,
@@ -36,7 +36,7 @@ def load_pretrained_model(model_path, model_type, load_8bit=False, load_4bit=Fal
     model.resize_token_embeddings(len(tokenizer))
 
     matchup_tower = model.get_matchup_tower()
-    if not matchup_tower.is_loaded:
+    if not matchup_tower.is_loaded():
         matchup_tower.load_model()
     matchup_tower.to(device=device, dtype=torch.float16)
 

@@ -1,26 +1,23 @@
 from torch.utils.data import Dataset
-from typing import List
-from big10.preprocessing.context import get_processed_game_data
 
 class Big10Dataset(Dataset):
-    def __init__(self, game_ids: List[str]):
-        self.game_ids = game_ids
-        self.data = []
-        for game_id in game_ids:
-            try:
-                game_input, drives = get_processed_game_data(game_id)
-                if game_input is not None and drives is not None:
-                    self.data.append({
-                        "game_input": game_input,
-                        "drives_text": drives
-                    })
-            except ValueError:
-                pass
-            except Exception as e:
-                raise e
+    def __init__(self, data, encoder_tokenizer, decoder_tokenizer, encoder_max_length=512, decoder_max_length=128):
+        self.data = data
+        self.encoder_tokenizer = encoder_tokenizer
+        self.decoder_tokenizer = decoder_tokenizer
+        self.encoder_max_length = encoder_max_length
+        self.decoder_max_length = decoder_max_length
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return self.data[idx]
+        item = self.data[idx]
+        encoder_vals = [str(v) for k, v in item.items() if k != 'drives']
+        matchup = self.encoder_tokenizer(" ".join(encoder_vals), max_length=self.encoder_max_length, padding="max_length", truncation=True, return_tensors="pt")
+        drives = self.decoder_tokenizer(item['drives'], max_length=self.decoder_max_length, padding="max_length", truncation=True, return_tensors="pt")
+        return {
+            "input_ids": drives.input_ids.squeeze(),
+            "attention_mask": drives.attention_mask.squeeze(),
+            "matchups": matchup.input_ids.squeeze()
+        }

@@ -14,7 +14,7 @@ class Big10MetaModel:
         super(Big10MetaModel, self).__init__(config)
 
         if hasattr(config, "matchup_tower"):
-            self.matchup_tower = build_matchup_tower(config)
+            self.matchup_tower = build_matchup_tower(config, delay_loading=True)
             self.matchup_projector = build_matchup_projector(config)
 
     def get_matchup_tower(self):
@@ -55,6 +55,10 @@ class Big10MetaForCausalLM(ABC):
 
     def encode_matchups(self, matchups):
         matchup_features = self.get_model().get_matchup_tower()(matchups)
+        # matchup_features is CausalLMOutputWithCrossAttentions
+        # and we need to extract the last hidden states
+        if hasattr(matchup_features, "hidden_states"):
+            matchup_features = matchup_features.hidden_states[-1]
         matchup_features = self.get_model().matchup_projector(matchup_features)
         return matchup_features
 

@@ -13,6 +13,7 @@ from big10.model.arch import Big10MetaModel, Big10MetaForCausalLM
 
 class Big10LlamaConfig(LlamaConfig):
     model_type = "big10-llama"
+    encoder_path = None
 
 
 class Big10LlamaModel(Big10MetaModel, LlamaModel):
@@ -68,7 +69,6 @@ class Big10LlamaForCausalLM(LlamaForCausalLM, Big10MetaForCausalLM):
                 labels,
                 matchups
             )
-
         return super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
