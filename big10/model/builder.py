@@ -4,7 +4,7 @@ from transformers import AutoTokenizer, BitsAndBytesConfig, logging
 
 logging.set_verbosity_error()
 
-from big10.model import Big10LlamaForCausalLM
+from big10.model import Big10LlamaForCausalLM, Big10LlamaConfig
 
 
 def load_pretrained_model(model_path, model_type, load_8bit=False, load_4bit=False,
@@ -39,14 +39,8 @@ def load_pretrained_model(model_path, model_type, load_8bit=False, load_4bit=Fal
     if not matchup_tower.is_loaded:
         matchup_tower.load_model()
     matchup_tower.to(device=device, dtype=torch.float16)
-    preprocessor = matchup_tower.preprocessor
-
-    if hasattr(model.config, "max_sequence_length"):
-        context_len = model.config.max_sequence_length
-    else:
-        context_len = 4096
 
     if model.generation_config.pad_token_id is None:
         model.generation_config.pad_token_id = model.generation_config.eos_token_id
 
-    return tokenizer, model, preprocessor, context_len
+    return tokenizer, model

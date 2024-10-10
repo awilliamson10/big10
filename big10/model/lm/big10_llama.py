@@ -48,7 +48,7 @@ class Big10LlamaForCausalLM(LlamaForCausalLM, Big10MetaForCausalLM):
             use_cache: Optional[bool] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            images: Optional[torch.FloatTensor] = None,
+            matchups: Optional[torch.FloatTensor] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
@@ -66,7 +66,7 @@ class Big10LlamaForCausalLM(LlamaForCausalLM, Big10MetaForCausalLM):
                 attention_mask,
                 past_key_values,
                 labels,
-                images
+                matchups
             )
 
         return super().forward(
@@ -84,17 +84,17 @@ class Big10LlamaForCausalLM(LlamaForCausalLM, Big10MetaForCausalLM):
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, attention_mask=None,
                                       **kwargs):
-        images = kwargs.pop("images", None)
+        matchups = kwargs.pop("matchups", None)
 
         _inputs = super().prepare_inputs_for_generation(
             input_ids, past_key_values=past_key_values, inputs_embeds=inputs_embeds, attention_mask=attention_mask,
             **kwargs
         )
 
-        if images is not None:
-            _inputs['images'] = images
+        if matchups is not None:
+            _inputs['matchups'] = matchups
         return _inputs
 
 
 AutoConfig.register("big10-llama", Big10LlamaConfig)
-AutoModelForCausalLM.register("big10-llama", Big10LlamaForCausalLM)
+AutoModelForCausalLM.register(Big10LlamaConfig, Big10LlamaForCausalLM)

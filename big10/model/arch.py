@@ -14,7 +14,7 @@ class Big10MetaModel:
         super(Big10MetaModel, self).__init__(config)
 
         if hasattr(config, "matchup_tower"):
-            self.matchup_tower = build_matchup_tower(config, delay_load=True)
+            self.matchup_tower = build_matchup_tower(config)
             self.matchup_projector = build_matchup_projector(config)
 
     def get_matchup_tower(self):
